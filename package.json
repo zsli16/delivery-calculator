@@ -1,0 +1,21 @@
+{
+  "name": "expected-delivery-calculator",
+  "version": "1.0.0",
+  "description": "A static calculator for expected delivery time based on product and country without having ordered",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "npm run test"
+  },
+  "keywords": [
+    "delivery",
+    "expected delivery date"
+  ],
+  "author": "Sue Li<sue.li@albelli.com>",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.4",
+    "moment": "^2.24.0",
+    "moment-business-days": "^1.1.3"
+  }
+}

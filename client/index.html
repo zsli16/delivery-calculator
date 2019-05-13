@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport"content="width=device-width, initial-scale=1">
+    <title>Delivery Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="./libraries/moment.js"></script>
+    <script src="./libraries/moment-business.js"></script>
+    <script src="shippingapi.js"></script>
+  </head>
+  <body>
+  <form>
+    <h1>Expected Delivery Date Calculator</h1>
+    <p>Calculate the expected delivery date for your product based on working days and local holidays.</p>
+
+    <p>When did you order your product?</p>
+    <input id="date" type="date" name="order-date" min="2019-05-01" max="2019-12-31">
+
+    <p>What vendor have you ordered from?</p>
+    <select name="vendor" id="vendor" onChange="checkZipcode()">
+      <option value="nl">NL</option>
+      <option value="be">BE</option>
+      <option value="de">DE</option>
+      <option value="uk">UK</option>
+      <option value="fr">FR</option>
+      <option value="no">NO</option>
+      <option value="se">SE</option>
+    </select>
+
+    <p>Product Type</p>
+    <select name="product" id="product">
+      <option value="Photobooks">Photobook</option>
+      <option value="Wall-Decor">Wall Decor</option>
+      <option value="Cards">Cards</option>
+      <option value="Calendar">Calendar</option>
+      <option value="Prints">Prints</option>
+      <option value="Mugs">Mugs</option>
+    </select>
+     
+
+    <div id="zip-code">
+      <p>Zip code:<p>
+      <select name="zip-code" id="select-zipcode">
+        <option value="0015-3999">0015-3999</option>
+        <option value="4000-7599">4000-7599</option>
+        <option value="7600-7999">7600-7999</option>
+        <option value="8000-8599">8000-8599</option>
+        <option value="8600-8999">8600-8999</option>
+        <option value="9000-9999">9000-9999</option>
+      </select>
+    </div>
+
+    <br>
+    <input onClick="getData()" type="submit"></input>
+  </form>
+  
+  <div id="expected-date">
+    Your expected delivery date is:
+    <span id="expected-date-content"></span>
+  </div>
+
+  <script>
+
+  let zip = '';
+
+  function checkZipcode() {
+    let vendor = document.getElementById('vendor').value;
+    if (vendor === 'no') {
+      document.getElementById('zip-code').style.display = 'block';
+      zip = document.getElementById('select-zipcode').value;
+    }
+  }
+
+  function getData() {
+    event.preventDefault();
+
+    let dutchHolidays = [];
+
+    let vendor = document.getElementById('vendor').value;
+    let orderDate = document.getElementById('date').value;
+    let product = document.getElementById('product').value;
+    
+    getHolidaysByVendor(vendor);
+    const days = getDaysByProduct(product, vendor);
+
+    // calculate and format date
+    let expectedDate = moment(orderDate, 'YYYY-MM-DD').businessAdd(days)._d;
+    expectedDate = moment(expectedDate).format('dddd, MMMM Do YYYY');
+
+    // update date in the DOM
+    const output = document.getElementById('expected-date').childNodes[1];
+    output.innerHTML = expectedDate;
+  }
+
+  function getDaysByProduct(p, v) {
+    for (let country in shippingapi) {
+      if (v) { // check for vendor in shippingapi object
+        for (let productCategory in shippingapi[v]) {
+          if (p) { // if product matches
+            if (zip === '') { // if zipcode is selected (for vendors such as NO where postal time varies widely)
+              return shippingapi[v][productCategory];
+            } else {
+              const productionDays = shippingapi[v][productCategory];
+              const deliveryDaysMax = shippingapi[v].Zipcodes[zip][1];
+              const totalDays = deliveryDaysMax + productionDays;
+              return totalDays;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function getHolidaysByVendor(vendor) {
+    // pre-populated with Dutch holidays
+    let localHolidays = ["2020-01-01", "2020-04-10", "2020-04-12", "2020-04-13", "2020-04-27", "2020-05-05", "2020-05-21", "2020-06-01", "2020-12-25", "2020-12-26", "2019-01-01", "2019-04-19", "2019-04-21", "2019-04-22", "2019-04-27", "2019-05-05", "2019-05-30", "2019-06-10", "2019-12-25", "2019-12-26"]
+    fetch(`https://date.nager.at/api/v2/publicholidays/2019/${vendor}` || `./holidays/${vendor}.json`) // holidays are also stored locally in case public API fails, such in the case of blocking CORS issues
+      .then(res => res.json())
+      .then(res => {
+        res.forEach(holiday => localHolidays.push(holiday.date))
+        return moment.updateLocale(`${vendor}`, {
+          holidays: localHolidays,
+          holidayFormat: 'YYYY-MM-DD',
+        })
+      })
+  }
+ 
+  </script>
+  
+  </body>
+</html>
